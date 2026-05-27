@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model InstitutionProfile {
+  id                  String   @id @default(uuid())
+  nama_instansi       String
+  nama_kepala         String
+  nip_kepala          String
+  nama_pengelola_jkn  String
+  nip_pengelola_jkn   String
+  nama_bendahara      String
+  nip_bendahara       String
+  nama_pptk           String
+  nip_pptk            String
+  tahun_pembukuan     Int
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model SumberDana {
+  kode          String          @id // e.g., KAPITASI, NON_KAPITASI, RETRIBUSI
+  nama          String
+  subSumberDana SubSumberDana[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SubSumberDana {
+  id             String           @id @default(uuid())
+  kode_sumber    String
+  nama           String           // e.g., RITP, Ambulan
+  sumberDana     SumberDana       @relation(fields: [kode_sumber], references: [kode], onDelete: Restrict)
+  rencanaBelanja RencanaBelanja[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([kode_sumber])
+}
+
+model RekeningBelanja {
+  kode_rekening  String           @id
+  uraian_belanja String
+  rencanaBelanja RencanaBelanja[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model RencanaBelanja {
+  id              String          @id @default(uuid())
+  id_sub_sumber   String
+  kode_rekening   String
+  tahun           Int
+  pagu_anggaran   Decimal         @db.Decimal(15, 2)
+  
+  subSumberDana   SubSumberDana   @relation(fields: [id_sub_sumber], references: [id], onDelete: Restrict)
+  rekeningBelanja RekeningBelanja @relation(fields: [kode_rekening], references: [kode_rekening], onDelete: Restrict)
+  transaksi       Transaksi[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([tahun, id_sub_sumber, kode_rekening])
+}
+
+enum JenisTransaksi {
+  PENDAPATAN
+  BELANJA
+}
+
+model Transaksi {
+  id                 String         @id @default(uuid())
+  id_rencana_belanja String
+  tanggal            DateTime
+  jenis              JenisTransaksi
+  uraian             String
+  nominal            Decimal        @db.Decimal(15, 2)
+  bukti              String?        // Optional field for storing receipt/document URL or path
+
+  rencanaBelanja     RencanaBelanja @relation(fields: [id_rencana_belanja], references: [id], onDelete: Restrict)
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
